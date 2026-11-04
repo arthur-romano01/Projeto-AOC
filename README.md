@@ -1,28 +1,29 @@
-<h1 align="center"> 🚀 Duelo de Robôs - MIPS 🚀 <br>
+<h1 align="center"> 🚀 AOCalipse 🚀 <br>
   <img src="https://img.shields.io/badge/UNIFESP-Universidade%20Federal%20de%20S%C3%A3o%20Paulo-215a36" alt="UNIFESP">
   <img src="https://img.shields.io/badge/Arquitetura%20e%20Organiza%C3%A7%C3%A3o%20de%20Computadores-2026.2-215a36" alt="AOC 2026.2">
 </h1>
 
 ## 📖 Descrição do Produto
-**Duelo de Robôs** é um jogo tático de combate em turnos para dois jogadores (1v1 simultâneo em terminal), desenvolvido em linguagem Assembly MIPS para o simulador MARS.
+<img src="assets/capa.png" align="center" width="100%">
 
-Antes do combate iniciar, cada jogador escolhe o **Chassi** de seu robô entre 4 opções com custos e multiplicadores distintos. A cada rodada, ambos os jogadores selecionam suas ações em segredo (o terminal rola linhas em branco para ocultar a jogada anterior). Em seguida, o sistema revela simultaneamente os movimentos, processa as interações lógicas de ataque, defesa e recarga, avalia a mecânica de **Sobrecarga** e atualiza o estado de energia dos competidores até a vitória de um dos lados.
+Inspirado na proposta de "Duelo de robôs por turnos", AOCalipse é um jogo tático de combate em turnos simultâneos para dois jogadores desenvolvido em assembly MIPS. Expandindo a ideia original cada competidor personaliza seu chassi com atributos distintos e gerencia seus níveis de energia. Além disso, o projeto introduz um sistema arriscado de Sobrecarga, no qual ultrapassar determinados limites de energia duplica tanto o dano causado quanto o recebido, trazendo profundidade estratégica e explorando mais instruções de baixo nível da arquitetura RISC.
 
 ---
 
 ## 👥 Integrantes
 
-| Nome                        |   RA   |
-| --------------------------- | :----: |
-| Arthur Romano da Luz        | 168498 |
-| Felipe ...                  |  ...   |
-| João Victor Assaoka Ribeiro | 168863 |
-| Luis ...                    |  ...   |
-| Paulo ...                   |  ...   |
+| Nome                          |   RA   | Email Institucional        |
+| :---------------------------- | :----: | :------------------------- |
+| Arthur Romano da Luz          | 168498 | arthur.romano01@unifesp.br |
+| João Victor Assaoka Ribeiro   | 168863 | joao.assaoka@unifesp.br    |
+| Felipe Gabriel de Santana     | 163713 | felipe.santana@unifesp.br  |
+| Paulo Felipe Crot Ramos       | 169055 | paulo.crot14@unifesp.br    |
+| Luís Felipe Salgado Mitidieri | 158555 | mitidieri.luis@unifesp.br  |
 
 ---
 
 ## 🛠️ Instruções de Execução
+Pendente
 
 ---
 
@@ -30,10 +31,13 @@ Antes do combate iniciar, cada jogador escolhe o **Chassi** de seu robô entre 4
 
 ### 1. Seleção de Chassi (Início do jogo)
 Cada jogador escolhe seu chassi digitando um número de `1` a `4`:
-- `1`: **Equilibrado** `[Custo: 4 | Dano: 8 | Defesa: 2 | Recarga: 10]`
-- `2`: **Canhoneiro** `[Custo: 6 | Dano: 14 | Defesa: 4 | Recarga: 8]`
-- `3`: **Tanque** `[Custo: 3 | Dano: 5 | Defesa: 1 | Recarga: 10]`
-- `4`: **Reator Instável** `[Custo: 5 | Dano: 9 | Defesa: 3 | Recarga: 16]`
+
+| Opção | Chassi              | Custo Ataque | Dano Ataque | Custo Defesa | Recarga |
+| :---: | :------------------ | :----------: | :---------: | :----------: | :-----: |
+|  `1`  | **Equilibrado**     |      4       |      8      |      2       |   10    |
+|  `2`  | **Canhoneiro**      |      6       |     14      |      4       |    8    |
+|  `3`  | **Tanque**          |      3       |      5      |      1       |   10    |
+|  `4`  | **Reator Instável** |      5       |      9      |      3       |   16    |
 
 ### 2. Rodadas de Ação
 A cada turno, o jogador ativo digita a sua ação secreta:
