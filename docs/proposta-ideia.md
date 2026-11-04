@@ -21,7 +21,7 @@
 - **Público Previsto:** Estudantes de computação, entusiastas de jogos de estratégia em terminal e interessados em arquiteturas RISC.
 - **Interação Principal:**
   1. **Seleção de Modo de Jogo:** O usuário escolhe se deseja jogar no modo **PvP** (2 jogadores humanos) ou contra o **Computador (CPU/Bot)**.
-  2. **Configuração de Semente Aleatória (Seed RNG):** Caso o modo contra a CPU seja escolhido (ou para eventos procedurais), o programa solicita ao usuário um número inteiro positivo como semente do gerador de números pseudoaleatórios, permitindo partidas variadas e ao mesmo tempo determinísticas/reproduzíveis (útil para testes). Se o usuário inserir `-1`, o sistema utiliza o tempo atual do sistema (`syscall 30 - time`) como semente dinâmica.
+  2. **Configuração de Semente Aleatória (Seed RNG):** Exclusivo para o modo contra o computador. O programa solicita ao usuário um número inteiro positivo como semente do gerador de números pseudoaleatórios, permitindo partidas variadas e ao mesmo tempo determinísticas/reproduzíveis (útil para testes). Se o usuário inserir `-1`, o sistema utiliza o tempo atual do sistema (`syscall 30 - time`) como semente dinâmica. No modo 2 jogadores, essa etapa é dispensada.
   3. **Seleção de Chassi:** Na fase preparatória, cada jogador escolhe seu chassi entre 4 opções balanceadas (se for contra a CPU, a escolha do robô adversário e suas ações no turno são geradas via sorteio pseudoaleatório).
   4. **Rodadas de Ação:** 
      - No modo 2 jogadores: o Jogador 1 insere sua ação em segredo, a tela rola para ocultar a jogada e o Jogador 2 insere a sua ação.
