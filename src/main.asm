@@ -23,6 +23,17 @@ aux_recarga: .asciiz "Recarga: "
 aux_energia: .asciiz "Energia: "
 
 fim: .asciiz "Fim da partida.\n"
+menu_modo: .asciiz "Selecione o Modo de Jogo:\n  1 - Dois Jogadores (1v1 Local)\n  2 - Um Jogador vs Computador (CPU)\nOpcao: "
+msg_modo_invalido: .asciiz "[ERRO] Opcao invalida! Digite 1 ou 2.\n\n"
+msg_semente: .asciiz "\nConfiguracao de Semente RNG:\nDigite um inteiro positivo para semente fixa\nOu digite -1 para semente via tempo real: "
+msg_semente_invalida: .asciiz "[ERRO] Semente invalida! Digite um valor > 0 ou -1.\n"
+msg_cpu_chassi: .asciiz "\n[COMPUTADOR] Escolheu o chassi sorteado: "
+msg_cpu_jogada: .asciiz "\n[COMPUTADOR] Escolheu sua acao secreta.\n"
+
+modo_jogo: .word 1
+semente_rng: .word 0
+p1_acao: .word 0
+p2_acao: .word 0
 tabela_chassi:
     .ascii  "\nOp | Chassi          | C.Atq | Dano | C.Def | Recarga\n"
     .ascii  "1  | Equilibrado     |   4   |   8  |   2   |   10\n"
@@ -51,6 +62,15 @@ menu_acao:
 .globl main
 
 main:
+# 1. Configura modo de jogo (1v1 ou CPU)
+jal configurar_modo
+
+# 2. Se for contra Computador (modo 2), configura a semente RNG
+lw $t0, modo_jogo
+bne $t0, 2, pular_semente
+jal configurar_semente
+
+pular_semente:
 #inicia ambos os jogadores com energia = 40
 li $t5, 40
 
@@ -121,9 +141,37 @@ sw $t4, 16($s0) #recarga
 sw $t5, 20($s0) #energia
 
 beq $t7, 2, partida #se anbos ja foram salvos incia partida
+
+# Se for modo CPU, o computador sorteia o chassi
+lw $t9, modo_jogo
+beq $t9, 2, cpu_escolhe_chassi
+
 addi $t7, $t7, 1 #incrementa para continuar loop
 jal ocultar_terminal
 j seleciona_chassi #volta ao inicio do loop
+
+cpu_escolhe_chassi:
+li $t7, 2
+li $v0, 42         # random int range
+li $a0, 0          # gerador 0
+li $a1, 4          # limite 4 -> sorteia 0..3
+syscall
+addi $t0, $a0, 1   # converte para 1..4
+
+li $v0, 4
+la $a0, msg_cpu_chassi
+syscall
+li $v0, 1
+move $a0, $t0
+syscall
+li $v0, 11
+li $a0, 10
+syscall
+
+beq $t0, 1, chassi1
+beq $t0, 2, chassi2
+beq $t0, 3, chassi3
+beq $t0, 4, chassi4
 
 partida:
 li $v0, 4
@@ -181,18 +229,25 @@ beq $t5, 0, fim_partida
 j ler_jogada1
 
 atacar:
-
+li $t5, 1
+sw $t5, p1_acao
 j fim_jogada1
 
 defender:
-
+li $t5, 2
+sw $t5, p1_acao
 j fim_jogada1
 
 recarregar:
-
+li $t5, 3
+sw $t5, p1_acao
+j fim_jogada1
 
 fim_jogada1:
+lw $t9, modo_jogo
+bne $t9, 1, pular_ocultar_p1
 jal ocultar_terminal
+pular_ocultar_p1:
 j Jogador_2 #Depois que o jogador 1 finalizar sua vez, passa a vez para o jogador 2
 
 
@@ -200,6 +255,9 @@ Jogador_2:
 #imprime info do jogador 2
 la $a0, chassi_j2
 jal imprimir
+
+lw $t9, modo_jogo
+beq $t9, 2, cpu_jogada
 
 li $v0, 4
 la $a0, leitura_jogador
@@ -220,16 +278,33 @@ beq $t6, 3, recarregar_2
 beq $t6, 0, fim_partida
 j ler_jogada2
 
-atacar_2:
+cpu_jogada:
+li $v0, 42         # random int range
+li $a0, 0
+li $a1, 3          # gera 0..2
+syscall
+addi $t6, $a0, 1   # mapeia para 1..3
 
+li $v0, 4
+la $a0, msg_cpu_jogada
+syscall
+
+sw $t6, p2_acao
+j fim_jogada2
+
+atacar_2:
+li $t6, 1
+sw $t6, p2_acao
 j fim_jogada2
 
 defender_2:
-
+li $t6, 2
+sw $t6, p2_acao
 j fim_jogada2
 
 recarregar_2:
-
+li $t6, 3
+sw $t6, p2_acao
 j fim_jogada2
 
 
@@ -352,4 +427,68 @@ syscall
 addi $t8, $t8, 1
 j loop_ocultar
 fim_ocultar:
+jr $ra
+
+# ==============================================================================
+# PROCEDIMENTO: configurar_modo
+# Descrição: Lê e valida o modo de jogo (1 - 2 Jogadores, 2 - CPU).
+# ==============================================================================
+configurar_modo:
+li $v0, 4
+la $a0, menu_modo
+syscall
+
+li $v0, 5
+syscall
+move $t0, $v0
+
+beq $t0, 1, modo_valido
+beq $t0, 2, modo_valido
+
+li $v0, 4
+la $a0, msg_modo_invalido
+syscall
+j configurar_modo
+
+modo_valido:
+sw $t0, modo_jogo
+jr $ra
+
+# ==============================================================================
+# PROCEDIMENTO: configurar_semente
+# Descrição: Configura semente RNG (syscall 40) direta ou via timestamp (syscall 30).
+# ==============================================================================
+configurar_semente:
+li $v0, 4
+la $a0, msg_semente
+syscall
+
+li $v0, 5
+syscall
+move $t0, $v0
+
+beq $t0, -1, semente_tempo
+bgtz $t0, semente_fixa
+
+li $v0, 4
+la $a0, msg_semente_invalida
+syscall
+j configurar_semente
+
+semente_tempo:
+li $v0, 30         # syscall time (retorna timestamp em $a0)
+syscall
+move $a1, $a0      # move para $a1
+li $a0, 0          # id do gerador
+li $v0, 40         # set seed
+syscall
+sw $a1, semente_rng
+jr $ra
+
+semente_fixa:
+move $a1, $t0      # semente fixa em $a1
+li $a0, 0          # id do gerador
+li $v0, 40         # set seed
+syscall
+sw $a1, semente_rng
 jr $ra
