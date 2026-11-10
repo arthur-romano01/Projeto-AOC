@@ -157,7 +157,7 @@ syscall
 
 Jogador_1:
 #imprime info do jogador 1
-la $s0, chassi_j1
+la $a0, chassi_j1
 jal imprimir
 
 li $v0, 4
@@ -196,7 +196,7 @@ j Jogador_2 #Depois que o jogador 1 finalizar sua vez, passa a vez para o jogado
 
 Jogador_2:
 #imprime info do jogador 2
-la $s0, chassi_j2
+la $a0, chassi_j2
 jal imprimir
 
 li $v0, 4
@@ -245,8 +245,11 @@ li $v0, 10
 syscall
 
 
-#funcao auxiliar imprimr a info atual no vetor de chassi com endereco $s0
+#funcao auxiliar imprimir a info atual no vetor de chassi (recebe endereco em $a0)
 imprimir:
+addi $sp, $sp, -4
+sw $s0, 0($sp)
+move $s0, $a0
 
 li $v0, 4
 la $a0, aux_separador2
@@ -328,4 +331,6 @@ li $v0, 11
 li $a0, 10
 syscall
 
+lw $s0, 0($sp)
+addi $sp, $sp, 4
 jr $ra
