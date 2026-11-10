@@ -122,6 +122,7 @@ sw $t5, 20($s0) #energia
 
 beq $t7, 2, partida #se anbos ja foram salvos incia partida
 addi $t7, $t7, 1 #incrementa para continuar loop
+jal ocultar_terminal
 j seleciona_chassi #volta ao inicio do loop
 
 partida:
@@ -191,6 +192,7 @@ recarregar:
 
 
 fim_jogada1:
+jal ocultar_terminal
 j Jogador_2 #Depois que o jogador 1 finalizar sua vez, passa a vez para o jogador 2
 
 
@@ -333,4 +335,21 @@ syscall
 
 lw $s0, 0($sp)
 addi $sp, $sp, 4
+jr $ra
+
+# ==============================================================================
+# PROCEDIMENTO: ocultar_terminal
+# Descrição: Emite 25 quebras de linha ('\n') para descer a tela no terminal
+#            e impedir visão espia da jogada secreta no terminal do MARS.
+# ==============================================================================
+ocultar_terminal:
+li $t8, 0
+li $v0, 11               # print_char
+li $a0, 10               # ASCII '\n'
+loop_ocultar:
+beq $t8, 25, fim_ocultar
+syscall
+addi $t8, $t8, 1
+j loop_ocultar
+fim_ocultar:
 jr $ra
