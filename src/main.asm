@@ -31,6 +31,8 @@ msg_cpu_chassi: .asciiz "\n[COMPUTADOR] Escolheu o chassi sorteado: "
 msg_cpu_jogada: .asciiz "\n[COMPUTADOR] Escolheu sua acao secreta.\n"
 msg_desistencia_p1: .asciiz "\n[JOGADOR 1] Desistiu da partida!\n"
 msg_desistencia_p2: .asciiz "\n[JOGADOR 2] Desistiu da partida!\n"
+msg_chassi_invalido: .asciiz "\n[ERRO] Opcao invalida! Digite um valor entre 1 e 4.\n\n"
+msg_acao_invalida:   .asciiz "\n[ERRO] Acao invalida! Digite 1, 2, 3 ou 0.\n\n"
 
 modo_jogo: .word 1
 semente_rng: .word 0
@@ -40,7 +42,7 @@ tabela_chassi:
     .ascii  "2  | Canhoneiro      |   6   |  14  |   4   |    8\n"
     .ascii  "3  | Tanque          |   3   |   5  |   1   |   10\n"
     .asciiz "4  | Reator Instavel |   5   |   9  |   3   |   16\n"
-inicio_partida: .asciiz "Chassi selecionado, partida iniciando\n"
+inicio_partida: .asciiz "\nChassi selecionado, partida iniciando\n"
 custo_atq:  .word 0     
 dano_atq:   .word 0     
 custo_def:  .word 0     
@@ -114,6 +116,13 @@ beq $t0, 1, chassi1
 beq $t0, 2, chassi2
 beq $t0, 3, chassi3
 beq $t0, 4, chassi4
+
+li $v0, 4
+la $a0, msg_chassi_invalido
+syscall
+li $v0, 4
+la $a0, leitura_chassi
+syscall
 j ler_chassi            # Em caso de opcao invalida, volta para a leitura ate ser valida
 
 # Seta as variaveis de acordo com a opcao escolhida
@@ -254,6 +263,13 @@ beq $t5, 1, atacar
 beq $t5, 2, defender
 beq $t5, 3, recarregar
 beq $t5, 0, desistencia_p1
+
+li $v0, 4
+la $a0, msg_acao_invalida
+syscall
+li $v0, 4
+la $a0, menu_acao
+syscall
 j ler_jogada1
 
 atacar:
@@ -305,6 +321,13 @@ beq $t6, 1, atacar_2
 beq $t6, 2, defender_2
 beq $t6, 3, recarregar_2
 beq $t6, 0, desistencia_p2
+
+li $v0, 4
+la $a0, msg_acao_invalida
+syscall
+li $v0, 4
+la $a0, menu_acao
+syscall
 j ler_jogada2
 
 cpu_jogada:
