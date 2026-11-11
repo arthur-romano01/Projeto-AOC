@@ -1,11 +1,11 @@
 # ==============================================================================
-# PROJETO: Duelo de Robôs (MIPS Assembly)
-# DISCIPLINA: Arquitetura e Organização de Computadores - UNIFESP 2026.2
+# PROJETO: Duelo de Robos (MIPS Assembly)
+# DISCIPLINA: Arquitetura e Organizacao de Computadores - UNIFESP 2026.2
 # ARQUIVO: src/main.asm
-# DESCRIÇÃO: Jogo de combate em turnos simultâneos para 2 jogadores.
+# DESCRICAO: Jogo de combate em turnos simultaneos para 2 jogadores.
 #            Cada jogador escolhe um chassi (vetor de atributos).
-#            A cada rodada, escolhem ações secretas (Ataque, Defesa, Recarga).
-#            Implementa mecânica de Sobrecarga (dobro de dano via 'sll').
+#            A cada rodada, escolhem acoes secretas (Ataque, Defesa, Recarga).
+#            Implementa mecanica de Sobrecarga (dobro de dano via 'sll').
 # ==============================================================================
 .data
 leitura_chassi: .asciiz "Digite o chassi desejado:"
@@ -114,9 +114,9 @@ beq $t0, 1, chassi1
 beq $t0, 2, chassi2
 beq $t0, 3, chassi3
 beq $t0, 4, chassi4
-j ler_chassi            # Em caso de mandar uma opção inválida, volta para a linha de leitura da opção, até que uma opção válida seja digitada
+j ler_chassi            # Em caso de opcao invalida, volta para a leitura ate ser valida
 
-#Seta as variáveis de acordo com a opção escolhida
+# Seta as variaveis de acordo com a opcao escolhida
 chassi1:
 li $t1, 4
 li $t2, 8
@@ -596,7 +596,7 @@ jr $ra
 
 # ==============================================================================
 # PROCEDIMENTO: imprimir
-# Parâmetros: $a0 = Endereço base do vetor de atributos (chassi_j1 ou chassi_j2)
+# Parametros: $a0 = Endereco base do vetor de atributos (chassi_j1 ou chassi_j2)
 # ==============================================================================
 imprimir:
 addi $sp, $sp, -4
@@ -689,8 +689,8 @@ jr $ra
 
 # ==============================================================================
 # PROCEDIMENTO: ocultar_terminal
-# Descrição: Emite 25 quebras de linha ('\n') para descer a tela no terminal
-#            e impedir visão espia da jogada secreta no terminal do MARS.
+# Descricao: Emite 25 quebras de linha ('\n') para descer a tela no terminal
+#            e impedir visao espia da jogada secreta no terminal do MARS.
 # ==============================================================================
 ocultar_terminal:
 li $t8, 0
@@ -706,7 +706,7 @@ jr $ra
 
 # ==============================================================================
 # PROCEDIMENTO: configurar_modo
-# Descrição: Lê e valida o modo de jogo (1 - 2 Jogadores, 2 - CPU).
+# Descricao: Le e valida o modo de jogo (1 - 2 Jogadores, 2 - CPU).
 # ==============================================================================
 configurar_modo:
 li $v0, 4
@@ -731,7 +731,7 @@ jr $ra
 
 # ==============================================================================
 # PROCEDIMENTO: configurar_semente
-# Descrição: Configura semente RNG (syscall 40) direta ou via timestamp (syscall 30).
+# Descricao: Configura semente RNG (syscall 40) direta ou via timestamp (syscall 30).
 # ==============================================================================
 configurar_semente:
 li $v0, 4
