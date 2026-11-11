@@ -47,6 +47,23 @@ menu_acao:
     .ascii  "0) Sair\n"
     .asciiz "Acao: "
 
+# ------------------------------------------------------------------------------
+# MOTOR DE COMBATE (Arthur)
+# ------------------------------------------------------------------------------
+#acoes escolhidas na rodada atual (1 = Ataque, 2 = Defesa, 3 = Recarga)
+p1_acao: .word 0
+p2_acao: .word 0
+
+msg_sobrecarga_p1: .asciiz "\n-> [ALERTA] Jogador 1 em SOBRECARGA! Dano dobrado!"
+msg_sobrecarga_p2: .asciiz "\n-> [ALERTA] Jogador 2 em SOBRECARGA! Dano dobrado!"
+msg_bloqueio_p1: .asciiz "\n-> O escudo do Jogador 1 BLOQUEOU totalmente o ataque!"
+msg_bloqueio_p2: .asciiz "\n-> O escudo do Jogador 2 BLOQUEOU totalmente o ataque!"
+msg_dano_p1: .asciiz "\n-> Jogador 1 causou de dano: "
+msg_dano_p2: .asciiz "\n-> Jogador 2 causou de dano: "
+msg_empate: .asciiz "\n========================================\n>>> EMPATE TECNICO! Ambos robos destruidos! <<<\n"
+msg_vitoria_p1: .asciiz "\n========================================\n>>> VITORIA DO JOGADOR 1! Parabens! <<<\n"
+msg_vitoria_p2: .asciiz "\n========================================\n>>> VITORIA DO JOGADOR 2! Parabens! <<<\n"
+
 .text
 .globl main
 
@@ -132,6 +149,16 @@ syscall
 li $t0, 0
 
 loop_rodada:
+#verifica se algum robo foi destruido antes de iniciar uma nova rodada
+#$t0 guarda o contador de rodadas, por isso nao e utilizado aqui
+la $t8, chassi_j1
+lw $t1, 20($t8) #$t1 = energia do jogador 1
+la $t8, chassi_j2
+lw $t2, 20($t8) #$t2 = energia do jogador 2
+
+blez $t1, verificar_vencedor #energia P1 <= 0 -> fim de jogo
+blez $t2, verificar_vencedor #energia P2 <= 0 -> fim de jogo
+
 addi $t0, $t0, 1
 
 li $v0, 4
@@ -191,6 +218,7 @@ recarregar:
 
 
 fim_jogada1:
+sw $t5, p1_acao #salva a acao valida do jogador 1 na memoria
 j Jogador_2 #Depois que o jogador 1 finalizar sua vez, passa a vez para o jogador 2
 
 
@@ -232,7 +260,37 @@ j fim_jogada2
 
 
 fim_jogada2:
+sw $t6, p2_acao #salva a acao valida do jogador 2 na memoria
+jal resolver_turno #com as duas acoes escolhidas, resolve o combate da rodada
 j loop_rodada #Depois que o jogador 2 finalizar sua vez, volta para inicio do loop
+
+
+#verifica quem venceu a partida
+#entrada: $t1 = energia P1, $t2 = energia P2 (carregados em loop_rodada)
+verificar_vencedor:
+bgtz $t1, vitoria_p1 #P1 ainda vivo (logo P2 <= 0) -> vitoria P1
+bgtz $t2, vitoria_p2 #P2 ainda vivo (logo P1 <= 0) -> vitoria P2
+
+#ambos <= 0 -> empate
+li $v0, 4
+la $a0, msg_empate
+syscall
+j encerrar_jogo
+
+vitoria_p1:
+li $v0, 4
+la $a0, msg_vitoria_p1
+syscall
+j encerrar_jogo
+
+vitoria_p2:
+li $v0, 4
+la $a0, msg_vitoria_p2
+syscall
+
+encerrar_jogo:
+li $v0, 10 #encerra o programa
+syscall
 
 
 fim_partida:
@@ -243,6 +301,182 @@ syscall
 
 li $v0, 10
 syscall
+
+
+# ==============================================================================
+# SUB-ROTINA: resolver_turno
+# Resolve a rodada com base em p1_acao e p2_acao.
+#   Etapa 1: aplica custos/recargas de energia
+#   Etapa 2: verifica Sobrecarga (energia > 40) -> dobra dano emitido e sofrido
+#   Etapa 3: resolve Ataque vs Defesa e aplica o dano na energia do oponente
+# Registradores:
+#   $s0 = dano emitido por P1        $s1 = dano emitido por P2
+#   $s2 = multiplicador sofrido P1   $s3 = multiplicador sofrido P2
+#   $s4 = endereco chassi_j1         $s5 = endereco chassi_j2
+#   $t1 = p1_acao, $t2 = p2_acao, $t3/$t4 = temporarios
+# Obs: $t0 (contador de rodadas) NAO e alterado.
+# ==============================================================================
+resolver_turno:
+#---------------- Prologo: salva $ra e $s0-$s5 na pilha ----------------
+addi $sp, $sp, -28
+sw $ra, 24($sp)
+sw $s0, 20($sp)
+sw $s1, 16($sp)
+sw $s2, 12($sp)
+sw $s3, 8($sp)
+sw $s4, 4($sp)
+sw $s5, 0($sp)
+
+la $s4, chassi_j1 #base do vetor do jogador 1
+la $s5, chassi_j2 #base do vetor do jogador 2
+lw $t1, p1_acao
+lw $t2, p2_acao
+
+#---------------- Etapa 1: custos e recargas de energia ----------------
+#Jogador 1
+lw $t3, 20($s4) #$t3 = energia P1
+beq $t1, 1, rt_custo_atq_p1
+beq $t1, 2, rt_custo_def_p1
+beq $t1, 3, rt_recarga_p1
+j rt_fim_custo_p1
+
+rt_custo_atq_p1:
+lw $t4, 4($s4) #custo de ataque
+sub $t3, $t3, $t4 #energia -= custo_ataque
+j rt_fim_custo_p1
+
+rt_custo_def_p1:
+lw $t4, 12($s4) #custo de defesa
+sub $t3, $t3, $t4 #energia -= custo_defesa
+j rt_fim_custo_p1
+
+rt_recarga_p1:
+lw $t4, 16($s4) #valor de recarga
+add $t3, $t3, $t4 #energia += recarga
+
+rt_fim_custo_p1:
+sw $t3, 20($s4) #atualiza energia P1
+
+#Jogador 2
+lw $t3, 20($s5) #$t3 = energia P2
+beq $t2, 1, rt_custo_atq_p2
+beq $t2, 2, rt_custo_def_p2
+beq $t2, 3, rt_recarga_p2
+j rt_fim_custo_p2
+
+rt_custo_atq_p2:
+lw $t4, 4($s5)
+sub $t3, $t3, $t4
+j rt_fim_custo_p2
+
+rt_custo_def_p2:
+lw $t4, 12($s5)
+sub $t3, $t3, $t4
+j rt_fim_custo_p2
+
+rt_recarga_p2:
+lw $t4, 16($s5)
+add $t3, $t3, $t4
+
+rt_fim_custo_p2:
+sw $t3, 20($s5) #atualiza energia P2
+
+#---------------- Etapa 2: mecanica de Sobrecarga ----------------
+#dano base: so existe se o jogador atacou
+li $s0, 0
+bne $t1, 1, rt_dano_base_p2
+lw $s0, 8($s4) #$s0 = dano do chassi P1
+
+rt_dano_base_p2:
+li $s1, 0
+bne $t2, 1, rt_multiplicadores
+lw $s1, 8($s5) #$s1 = dano do chassi P2
+
+rt_multiplicadores:
+li $s2, 1 #multiplicador de dano sofrido por P1
+li $s3, 1 #multiplicador de dano sofrido por P2
+
+#Sobrecarga P1 (energia > 40)
+lw $t3, 20($s4)
+ble $t3, 40, rt_sobrecarga_p2
+sll $s0, $s0, 1 #dobra o dano emitido (shift left = x2)
+li $s2, 2 #P1 tambem passa a sofrer dano dobrado
+li $v0, 4
+la $a0, msg_sobrecarga_p1
+syscall
+
+rt_sobrecarga_p2:
+#Sobrecarga P2 (energia > 40)
+lw $t3, 20($s5)
+ble $t3, 40, rt_etapa3
+sll $s1, $s1, 1
+li $s3, 2
+li $v0, 4
+la $a0, msg_sobrecarga_p2
+syscall
+
+#---------------- Etapa 3: Ataque vs Defesa ----------------
+rt_etapa3:
+#P1 atacou?
+bne $t1, 1, rt_ataque_p2
+beq $t2, 2, rt_bloqueio_p2 #P2 defendeu -> ataque bloqueado
+
+mul $t3, $s0, $s3 #dano_final = dano P1 * multiplicador sofrido P2
+lw $t4, 20($s5)
+sub $t4, $t4, $t3 #energia P2 -= dano_final
+sw $t4, 20($s5)
+
+li $v0, 4
+la $a0, msg_dano_p1
+syscall
+li $v0, 1
+move $a0, $t3
+syscall
+j rt_ataque_p2
+
+rt_bloqueio_p2:
+li $v0, 4
+la $a0, msg_bloqueio_p2
+syscall
+
+rt_ataque_p2:
+#P2 atacou?
+bne $t2, 1, rt_epilogo
+beq $t1, 2, rt_bloqueio_p1 #P1 defendeu -> ataque bloqueado
+
+mul $t3, $s1, $s2 #dano_final = dano P2 * multiplicador sofrido P1
+lw $t4, 20($s4)
+sub $t4, $t4, $t3 #energia P1 -= dano_final
+sw $t4, 20($s4)
+
+li $v0, 4
+la $a0, msg_dano_p2
+syscall
+li $v0, 1
+move $a0, $t3
+syscall
+j rt_epilogo
+
+rt_bloqueio_p1:
+li $v0, 4
+la $a0, msg_bloqueio_p1
+syscall
+
+#---------------- Epilogo: restaura registradores ----------------
+rt_epilogo:
+li $v0, 11
+li $a0, 10 #quebra de linha
+syscall
+
+lw $s5, 0($sp)
+lw $s4, 4($sp)
+lw $s3, 8($sp)
+lw $s2, 12($sp)
+lw $s1, 16($sp)
+lw $s0, 20($sp)
+lw $ra, 24($sp)
+addi $sp, $sp, 28
+jr $ra
 
 
 #funcao auxiliar imprimr a info atual no vetor de chassi com endereco $s0
