@@ -29,6 +29,11 @@ msg_semente: .asciiz "\nConfiguracao de Semente RNG:\nDigite um inteiro positivo
 msg_semente_invalida: .asciiz "[ERRO] Semente invalida! Digite um valor > 0 ou -1.\n"
 msg_cpu_chassi: .asciiz "\n[COMPUTADOR] Escolheu o chassi sorteado: "
 msg_cpu_jogada: .asciiz "\n[COMPUTADOR] Escolheu sua acao secreta.\n"
+msg_desistencia_p1: .asciiz "\n[JOGADOR 1] Desistiu da partida!\n"
+msg_desistencia_p2: .asciiz "\n[JOGADOR 2] Desistiu da partida!\n"
+msg_vitoria_p1:     .asciiz ">>> FIM DE JOGO: VITORIA DO JOGADOR 1! <<<\n"
+msg_vitoria_p2:     .asciiz ">>> FIM DE JOGO: VITORIA DO JOGADOR 2! <<<\n"
+msg_vitoria_cpu:    .asciiz ">>> FIM DE JOGO: VITORIA DO COMPUTADOR! <<<\n"
 
 modo_jogo: .word 1
 semente_rng: .word 0
@@ -225,7 +230,7 @@ move $t5, $v0
 beq $t5, 1, atacar
 beq $t5, 2, defender
 beq $t5, 3, recarregar
-beq $t5, 0, fim_partida
+beq $t5, 0, desistencia_p1
 j ler_jogada1
 
 atacar:
@@ -275,7 +280,7 @@ move $t6, $v0
 beq $t6, 1, atacar_2
 beq $t6, 2, defender_2
 beq $t6, 3, recarregar_2
-beq $t6, 0, fim_partida
+beq $t6, 0, desistencia_p2
 j ler_jogada2
 
 cpu_jogada:
@@ -311,6 +316,35 @@ j fim_jogada2
 fim_jogada2:
 j loop_rodada #Depois que o jogador 2 finalizar sua vez, volta para inicio do loop
 
+
+desistencia_p1:
+li $v0, 4
+la $a0, msg_desistencia_p1
+syscall
+
+lw $t9, modo_jogo
+beq $t9, 2, desistencia_p1_cpu
+
+li $v0, 4
+la $a0, msg_vitoria_p2
+syscall
+j fim_partida
+
+desistencia_p1_cpu:
+li $v0, 4
+la $a0, msg_vitoria_cpu
+syscall
+j fim_partida
+
+desistencia_p2:
+li $v0, 4
+la $a0, msg_desistencia_p2
+syscall
+
+li $v0, 4
+la $a0, msg_vitoria_p1
+syscall
+j fim_partida
 
 fim_partida:
 
