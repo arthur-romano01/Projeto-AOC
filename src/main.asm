@@ -1,11 +1,11 @@
 # ==============================================================================
-# PROJETO: Duelo de Robôs (MIPS Assembly)
-# DISCIPLINA: Arquitetura e Organização de Computadores - UNIFESP 2026.2
+# PROJETO: Duelo de Robos (MIPS Assembly)
+# DISCIPLINA: Arquitetura e Organizacao de Computadores - UNIFESP 2026.2
 # ARQUIVO: src/main.asm
-# DESCRIÇÃO: Jogo de combate em turnos simultâneos para 2 jogadores.
+# DESCRICAO: Jogo de combate em turnos simultaneos para 2 jogadores.
 #            Cada jogador escolhe um chassi (vetor de atributos).
-#            A cada rodada, escolhem ações secretas (Ataque, Defesa, Recarga).
-#            Implementa mecânica de Sobrecarga (dobro de dano via 'sll').
+#            A cada rodada, escolhem acoes secretas (Ataque, Defesa, Recarga).
+#            Implementa mecanica de Sobrecarga (dobro de dano via 'sll').
 # ==============================================================================
 .data
 leitura_chassi: .asciiz "Digite o chassi desejado:"
@@ -23,13 +23,26 @@ aux_recarga: .asciiz "Recarga: "
 aux_energia: .asciiz "Energia: "
 
 fim: .asciiz "Fim da partida.\n"
+menu_modo: .asciiz "Selecione o Modo de Jogo:\n  1 - Dois Jogadores (1v1 Local)\n  2 - Um Jogador vs Computador (CPU)\nOpcao: "
+msg_modo_invalido: .asciiz "[ERRO] Opcao invalida! Digite 1 ou 2.\n\n"
+msg_semente: .asciiz "\nConfiguracao de Semente RNG:\nDigite um inteiro positivo para semente fixa\nOu digite -1 para semente via tempo real: "
+msg_semente_invalida: .asciiz "[ERRO] Semente invalida! Digite um valor > 0 ou -1.\n"
+msg_cpu_chassi: .asciiz "\n[COMPUTADOR] Escolheu o chassi sorteado: "
+msg_cpu_jogada: .asciiz "\n[COMPUTADOR] Escolheu sua acao secreta.\n"
+msg_desistencia_p1: .asciiz "\n[JOGADOR 1] Desistiu da partida!\n"
+msg_desistencia_p2: .asciiz "\n[JOGADOR 2] Desistiu da partida!\n"
+msg_chassi_invalido: .asciiz "\n[ERRO] Opcao invalida! Digite um valor entre 1 e 4.\n\n"
+msg_acao_invalida:   .asciiz "\n[ERRO] Acao invalida! Digite 1, 2, 3 ou 0.\n\n"
+
+modo_jogo: .word 1
+semente_rng: .word 0
 tabela_chassi:
     .ascii  "\nOp | Chassi          | C.Atq | Dano | C.Def | Recarga\n"
     .ascii  "1  | Equilibrado     |   4   |   8  |   2   |   10\n"
     .ascii  "2  | Canhoneiro      |   6   |  14  |   4   |    8\n"
     .ascii  "3  | Tanque          |   3   |   5  |   1   |   10\n"
     .asciiz "4  | Reator Instavel |   5   |   9  |   3   |   16\n"
-inicio_partida: .asciiz "Chassi selecionado, partida iniciando\n"
+inicio_partida: .asciiz "\nChassi selecionado, partida iniciando\n"
 custo_atq:  .word 0     
 dano_atq:   .word 0     
 custo_def:  .word 0     
@@ -63,11 +76,21 @@ msg_dano_p2: .asciiz "\n-> Jogador 2 causou de dano: "
 msg_empate: .asciiz "\n========================================\n>>> EMPATE TECNICO! Ambos robos destruidos! <<<\n"
 msg_vitoria_p1: .asciiz "\n========================================\n>>> VITORIA DO JOGADOR 1! Parabens! <<<\n"
 msg_vitoria_p2: .asciiz "\n========================================\n>>> VITORIA DO JOGADOR 2! Parabens! <<<\n"
+msg_vitoria_cpu: .asciiz "\n========================================\n>>> VITORIA DO COMPUTADOR! <<<\n"
 
 .text
 .globl main
 
 main:
+# 1. Configura modo de jogo (1v1 ou CPU)
+jal configurar_modo
+
+# 2. Se for contra Computador (modo 2), configura a semente RNG
+lw $t0, modo_jogo
+bne $t0, 2, pular_semente
+jal configurar_semente
+
+pular_semente:
 #inicia ambos os jogadores com energia = 40
 li $t5, 40
 
@@ -93,9 +116,16 @@ beq $t0, 1, chassi1
 beq $t0, 2, chassi2
 beq $t0, 3, chassi3
 beq $t0, 4, chassi4
-j ler_chassi            # Em caso de mandar uma opção inválida, volta para a linha de leitura da opção, até que uma opção válida seja digitada
 
-#Seta as variáveis de acordo com a opção escolhida
+li $v0, 4
+la $a0, msg_chassi_invalido
+syscall
+li $v0, 4
+la $a0, leitura_chassi
+syscall
+j ler_chassi            # Em caso de opcao invalida, volta para a leitura ate ser valida
+
+# Seta as variaveis de acordo com a opcao escolhida
 chassi1:
 li $t1, 4
 li $t2, 8
@@ -138,8 +168,37 @@ sw $t4, 16($s0) #recarga
 sw $t5, 20($s0) #energia
 
 beq $t7, 2, partida #se anbos ja foram salvos incia partida
+
+# Se for modo CPU, o computador sorteia o chassi
+lw $t9, modo_jogo
+beq $t9, 2, cpu_escolhe_chassi
+
 addi $t7, $t7, 1 #incrementa para continuar loop
+jal ocultar_terminal
 j seleciona_chassi #volta ao inicio do loop
+
+cpu_escolhe_chassi:
+li $t7, 2
+li $v0, 42         # random int range
+li $a0, 0          # gerador 0
+li $a1, 4          # limite 4 -> sorteia 0..3
+syscall
+addi $t0, $a0, 1   # converte para 1..4
+
+li $v0, 4
+la $a0, msg_cpu_chassi
+syscall
+li $v0, 1
+move $a0, $t0
+syscall
+li $v0, 11
+li $a0, 10
+syscall
+
+beq $t0, 1, chassi1
+beq $t0, 2, chassi2
+beq $t0, 3, chassi3
+beq $t0, 4, chassi4
 
 partida:
 li $v0, 4
@@ -184,7 +243,7 @@ syscall
 
 Jogador_1:
 #imprime info do jogador 1
-la $s0, chassi_j1
+la $a0, chassi_j1
 jal imprimir
 
 li $v0, 4
@@ -203,29 +262,47 @@ move $t5, $v0
 beq $t5, 1, atacar
 beq $t5, 2, defender
 beq $t5, 3, recarregar
-beq $t5, 0, fim_partida
+beq $t5, 0, desistencia_p1
+
+li $v0, 4
+la $a0, msg_acao_invalida
+syscall
+li $v0, 4
+la $a0, menu_acao
+syscall
 j ler_jogada1
 
 atacar:
-
+li $t5, 1
+sw $t5, p1_acao
 j fim_jogada1
 
 defender:
-
+li $t5, 2
+sw $t5, p1_acao
 j fim_jogada1
 
 recarregar:
-
+li $t5, 3
+sw $t5, p1_acao
+j fim_jogada1
 
 fim_jogada1:
 sw $t5, p1_acao #salva a acao valida do jogador 1 na memoria
+lw $t9, modo_jogo
+bne $t9, 1, pular_ocultar_p1
+jal ocultar_terminal
+pular_ocultar_p1:
 j Jogador_2 #Depois que o jogador 1 finalizar sua vez, passa a vez para o jogador 2
 
 
 Jogador_2:
 #imprime info do jogador 2
-la $s0, chassi_j2
+la $a0, chassi_j2
 jal imprimir
+
+lw $t9, modo_jogo
+beq $t9, 2, cpu_jogada
 
 li $v0, 4
 la $a0, leitura_jogador
@@ -243,19 +320,43 @@ move $t6, $v0
 beq $t6, 1, atacar_2
 beq $t6, 2, defender_2
 beq $t6, 3, recarregar_2
-beq $t6, 0, fim_partida
+beq $t6, 0, desistencia_p2
+
+li $v0, 4
+la $a0, msg_acao_invalida
+syscall
+li $v0, 4
+la $a0, menu_acao
+syscall
 j ler_jogada2
 
-atacar_2:
+cpu_jogada:
+li $v0, 42         # random int range
+li $a0, 0
+li $a1, 3          # gera 0..2
+syscall
+addi $t6, $a0, 1   # mapeia para 1..3
 
+li $v0, 4
+la $a0, msg_cpu_jogada
+syscall
+
+sw $t6, p2_acao
+j fim_jogada2
+
+atacar_2:
+li $t6, 1
+sw $t6, p2_acao
 j fim_jogada2
 
 defender_2:
-
+li $t6, 2
+sw $t6, p2_acao
 j fim_jogada2
 
 recarregar_2:
-
+li $t6, 3
+sw $t6, p2_acao
 j fim_jogada2
 
 
@@ -284,14 +385,51 @@ syscall
 j encerrar_jogo
 
 vitoria_p2:
+lw $t9, modo_jogo
+beq $t9, 2, vitoria_cpu
+
 li $v0, 4
 la $a0, msg_vitoria_p2
+syscall
+j encerrar_jogo
+
+vitoria_cpu:
+li $v0, 4
+la $a0, msg_vitoria_cpu
 syscall
 
 encerrar_jogo:
 li $v0, 10 #encerra o programa
 syscall
 
+desistencia_p1:
+li $v0, 4
+la $a0, msg_desistencia_p1
+syscall
+
+lw $t9, modo_jogo
+beq $t9, 2, desistencia_p1_cpu
+
+li $v0, 4
+la $a0, msg_vitoria_p2
+syscall
+j fim_partida
+
+desistencia_p1_cpu:
+li $v0, 4
+la $a0, msg_vitoria_cpu
+syscall
+j fim_partida
+
+desistencia_p2:
+li $v0, 4
+la $a0, msg_desistencia_p2
+syscall
+
+li $v0, 4
+la $a0, msg_vitoria_p1
+syscall
+j fim_partida
 
 fim_partida:
 
@@ -479,8 +617,14 @@ addi $sp, $sp, 28
 jr $ra
 
 
-#funcao auxiliar imprimr a info atual no vetor de chassi com endereco $s0
+# ==============================================================================
+# PROCEDIMENTO: imprimir
+# Parametros: $a0 = Endereco base do vetor de atributos (chassi_j1 ou chassi_j2)
+# ==============================================================================
 imprimir:
+addi $sp, $sp, -4
+sw $s0, 0($sp)
+move $s0, $a0
 
 li $v0, 4
 la $a0, aux_separador2
@@ -562,4 +706,87 @@ li $v0, 11
 li $a0, 10
 syscall
 
+lw $s0, 0($sp)
+addi $sp, $sp, 4
+jr $ra
+
+# ==============================================================================
+# PROCEDIMENTO: ocultar_terminal
+# Descricao: Emite 25 quebras de linha ('\n') para descer a tela no terminal
+#            e impedir visao espia da jogada secreta no terminal do MARS.
+# ==============================================================================
+ocultar_terminal:
+li $t8, 0
+li $v0, 11               # print_char
+li $a0, 10               # ASCII '\n'
+loop_ocultar:
+beq $t8, 25, fim_ocultar
+syscall
+addi $t8, $t8, 1
+j loop_ocultar
+fim_ocultar:
+jr $ra
+
+# ==============================================================================
+# PROCEDIMENTO: configurar_modo
+# Descricao: Le e valida o modo de jogo (1 - 2 Jogadores, 2 - CPU).
+# ==============================================================================
+configurar_modo:
+li $v0, 4
+la $a0, menu_modo
+syscall
+
+li $v0, 5
+syscall
+move $t0, $v0
+
+beq $t0, 1, modo_valido
+beq $t0, 2, modo_valido
+
+li $v0, 4
+la $a0, msg_modo_invalido
+syscall
+j configurar_modo
+
+modo_valido:
+sw $t0, modo_jogo
+jr $ra
+
+# ==============================================================================
+# PROCEDIMENTO: configurar_semente
+# Descricao: Configura semente RNG (syscall 40) direta ou via timestamp (syscall 30).
+# ==============================================================================
+configurar_semente:
+li $v0, 4
+la $a0, msg_semente
+syscall
+
+li $v0, 5
+syscall
+move $t0, $v0
+
+beq $t0, -1, semente_tempo
+bgtz $t0, semente_fixa
+
+li $v0, 4
+la $a0, msg_semente_invalida
+syscall
+j configurar_semente
+
+semente_tempo:
+li $v0, 30         # syscall time (retorna timestamp em $a0)
+syscall
+move $a1, $a0      # move para $a1
+li $a0, 0          # id do gerador
+li $v0, 40         # set seed
+syscall
+sw $a1, semente_rng
+jr $ra
+
+semente_fixa:
+move $a1, $t0      # semente fixa em $a1
+li $a0, 0          # id do gerador
+li $v0, 40         # set seed
+syscall
+sw $a1, semente_rng
 jr $ra
